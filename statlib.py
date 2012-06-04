@@ -90,8 +90,8 @@ def convert_fff(infile,outfile,dic,max=sys.maxint,sample=1):
 if __name__ == '__main__':
     dados = '~/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.txt'
     dicfile = '~/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
-    dic = sasinput(dicfile,filtercols=['NU_INSCRICAO','TX_RESPOSTAS_CN','DS_GABARITO_CN'])
+    dic = sasinput(dicfile,filtercols=['NU_INSCRICAO','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN'])
     #dic = sasinput(dicfile)
     print dic
     out = dados[:-3] + 'csv'
-    convert_fff(dados,out,dic,sample = 0.001)
+    convert_fff(dados,out,dic,sample = 0.005)
