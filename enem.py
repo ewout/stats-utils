@@ -130,7 +130,7 @@ def csv2df(csvfile = CSVFILE,idprov=89,tipprov='CN'):
     df = pandas.read_table(csvfile)
     df = df[(df['ID_PROVA_'+tipprov] == idprov) & (df['NU_NT_'+tipprov] != '         ')]
     df['nota'] = df['NU_NT_'+tipprov].apply(float)
-    df, teststats, itemstats = resvec(df,'TX_RESPOSTAS_'+tipprov,'DS_GABARITO_'+tipprov)
+    df, itemstats, teststats = resvec(df,'TX_RESPOSTAS_'+tipprov,'DS_GABARITO_'+tipprov)
     df = resvec2(df)
     return df, itemstats, teststats
 
