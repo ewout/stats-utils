@@ -3,6 +3,7 @@
 # Author: Ewout ter Haar <ewout@usp.br>
 # License: Apache 
 
+from __future__ import division
 import sys, os, random
 from optparse import OptionParser
 
@@ -54,7 +55,7 @@ def filelen(fn):
     fn = os.path.expanduser(fn)
     fsize = os.path.getsize(fn)
     linesize = len(open(fn).readline())
-    return fsize / linesize
+    return fsize // linesize
 
 
 def convert_fff(infile,outfile,dic,max=sys.maxint,sample=1):
@@ -68,6 +69,7 @@ def convert_fff(infile,outfile,dic,max=sys.maxint,sample=1):
 
     flines = filelen(infile)
     if sample < 1:
+        print flines, int(round(sample*flines))
         linestoconvert = random.sample(xrange(flines),int(round(sample*flines)))
         print "converting only %i lines." % len(linestoconvert)
     else:
@@ -86,12 +88,79 @@ def convert_fff(infile,outfile,dic,max=sys.maxint,sample=1):
     outfile.close()
 
 
+def itemdiscrimination(acertos,frac=0.5,scores=None):
+    'If scores is given, use it as an ability scale, otherwise use acertos.'
+    if not scores:
+        scores = acertos.sum(axis=1)
+    low = int(round((frac)*len(scores)))
+    high = int(round((1-frac)*len(scores)))
+    sscores = sorted(scores)
+    vhigh,vlow = sscores[high],sscores[low]
+    highgroup,lowgroup = acertos[scores > vhigh], acertos[scores < low]
+    Nhigh,Nlow = highgroup.shape[0],lowgroup.shape[0]
+    phigh,plow =  highgroup.sum(axis=0) / Nhigh, lowgroup.sum(axis=0) / Nlow
+
+    return phigh - plow
+
+def icc(acertos,qn,hscale,bins=10):
+    ''
+    acertos = acertos[:,qn]
+    from collections import Iterable
+    if not isinstance(bins,Iterable):
+        nbins = int(bins)
+        high = hscale.max()
+        low = hscale.min()
+        bins = np.linspace(low,high,nbins)
+
+    probs = []
+    hbin = []
+    for low, high in zip(bins,bins[1:]):
+        acertos_bin = (acertos[(hscale >=low) & (hscale < high)])
+        probs.append((acertos_bin.sum(),acertos_bin.mean(),acertos_bin.std()))
+        hbin.append((high+low)/2)
+    return np.array(probs), hbin
+
+
+def stats(acertos,hscale = None):
+    ''
+    teststats = {}
+    itemstats = {}
+    N = acertos.shape[0]
+    k = acertos.shape[1]
+    itemf = acertos.sum(axis=0) / float(N)
+    itemv = acertos.var(axis=0)
+    scores = acertos.sum(axis=1)
+
+    alpha = 1.0*k/(k-1)*(1-sum(itemv)/scores.var())
+
+    teststats['alpha'] = alpha
+    teststats['scores'] = scores
+    itemstats['N'] = N
+    itemstats['k'] = k
+    itemstats['itemf'] = itemf
+    itemstats['itemv'] = itemv
+    itemstats['id50'] = itemdiscrimination(acertos,frac=0.5)
+    itemstats['id27'] = itemdiscrimination(acertos,frac=0.27)
+    probv = []
+    if hasattr(hscale,'max'):
+        for qn in range(k):
+            probs,hbin = icc(acertos,qn,hscale,bins=20)
+            probv.append(probs)
+            itemstats['hbin'] = hbin
+            itemstats['icc'] = probv
+        
+    return itemstats, teststats 
+
+
 
 if __name__ == '__main__':
     dados = '~/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.txt'
     dicfile = '~/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
-    dic = sasinput(dicfile,filtercols=['NU_INSCRICAO','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN'])
-    #dic = sasinput(dicfile)
-    print dic
-    out = dados[:-3] + 'csv'
-    convert_fff(dados,out,dic,sample = 0.005)
+    filtercols = ['NU_INSCRICAO','IDADADE','TP_SEXO','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN','ID_PROVA_CH','NU_NT_CH','TX_RESPOSTAS_CH','DS_GABARITO_CH']
+    dic = sasinput(dicfile,filtercols=filtercols)
+    #chdic = sasinput(dicfile,filtercols=['NU_INSCRICAO','ID_PROVA_CH','NU_NT_CH','TX_RESPOSTAS_CH','DS_GABARITO_CH'])
+    #outcn = dados[:-4] + '-CN.csv'
+    #outch = dados[:-4] + '-CH.csv'
+    out = dados[:-4] + '.csv'
+    convert_fff(dados,out,dic,sample = 0.001)
+    #convert_fff(dados,outch,chdic,sample = 0.01)
