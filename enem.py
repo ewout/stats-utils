@@ -144,16 +144,16 @@ def iccgraph(df,acertos,qn,fig=None,ax=None):
         ax.set_title(u"Curva Característica Questão "+str(qn))
 
     itemstats, teststats = stats(acertos,hscale = df['nota'])
-    hbin = itemstats['hbin']
     icc = itemstats['icc'][qn-1]
-    acertos_no_bin = icc[:,0]
-    prob = icc[:,1]
-    std = icc[:,2]
-    err = std / np.sqrt(acertos_no_bin)
+    hbin = icc[:,0]
+    nbin = icc[:,1]
+    acertos_no_bin = icc[:,2]
+    prob = icc[:,3]
+    err = icc[:,4]
     ax.errorbar(hbin,prob,yerr=err,fmt='o')
     ax.set_ylim(0,1)
     ax.set_yticks([0,0.5,1])
-    ax.text(0.02,0.8,'Q'+str(qn),transform = ax.transAxes)
+    ax.text(0.03,0.85,'Q'+str(qn),transform = ax.transAxes)
     return fig, ax
 
 def iccgrid(df,acertos,ncols=5,nrows=9):

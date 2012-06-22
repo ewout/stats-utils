@@ -113,12 +113,11 @@ def icc(acertos,qn,hscale,bins=10):
         bins = np.linspace(low,high,nbins)
 
     probs = []
-    hbin = []
     for low, high in zip(bins,bins[1:]):
         acertos_bin = (acertos[(hscale >=low) & (hscale < high)])
-        probs.append((acertos_bin.sum(),acertos_bin.mean(),acertos_bin.std()))
-        hbin.append((high+low)/2)
-    return np.array(probs), hbin
+        nbin = len(acertos_bin)
+        probs.append(((high+low)/2,nbin,acertos_bin.sum(),acertos_bin.mean(),acertos_bin.std()/np.sqrt(nbin)))
+    return np.array(probs)
 
 
 def stats(acertos,hscale = None):
@@ -144,11 +143,9 @@ def stats(acertos,hscale = None):
     probv = []
     if hasattr(hscale,'max'):
         for qn in range(k):
-            probs,hbin = icc(acertos,qn,hscale,bins=20)
+            probs = icc(acertos,qn,hscale,bins=20)
             probv.append(probs)
-            itemstats['hbin'] = hbin
             itemstats['icc'] = probv
-        
     return itemstats, teststats 
 
 
@@ -156,11 +153,11 @@ def stats(acertos,hscale = None):
 if __name__ == '__main__':
     dados = '~/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.txt'
     dicfile = '~/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
-    filtercols = ['NU_INSCRICAO','IDADADE','TP_SEXO','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN','ID_PROVA_CH','NU_NT_CH','TX_RESPOSTAS_CH','DS_GABARITO_CH']
+    filtercols = ['NU_INSCRICAO','IDADE','TP_SEXO','TP_COR_RACA','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN','ID_PROVA_CH','NU_NT_CH','TX_RESPOSTAS_CH','DS_GABARITO_CH']
     dic = sasinput(dicfile,filtercols=filtercols)
     #chdic = sasinput(dicfile,filtercols=['NU_INSCRICAO','ID_PROVA_CH','NU_NT_CH','TX_RESPOSTAS_CH','DS_GABARITO_CH'])
     #outcn = dados[:-4] + '-CN.csv'
     #outch = dados[:-4] + '-CH.csv'
     out = dados[:-4] + '.csv'
-    convert_fff(dados,out,dic,sample = 0.001)
+    convert_fff(dados,out,dic,sample = 0.01)
     #convert_fff(dados,outch,chdic,sample = 0.01)
