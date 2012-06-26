@@ -8,21 +8,23 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from collections import Counter
-from statlib import convert_fff, sasinput, stats
+from statlib import convert_fff, sasinput, stats,invlogit
+import statsmodels.api as sm
 
-DATAFILE = '/home/ewout/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.txt'
-DICFILE =  '/home/ewout/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
+#DATAFILE = '/home/ewout/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.txt'
+#DICFILE =  '/home/ewout/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
+#CSVFILE =  '/home/ewout/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.csv'
 CSVFILE =  '/home/ewout/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.csv'
 
-gabarito2010 = {89:'BACEADCAECABDDACBABEBDEDAEECDBCDBDEEABDACEDDC',
-                90:'ACAEBCCEADADDBACBEBABDEEADEDDBCBCDDBAEEACDDEC',
-                91:'CABEAACDCEBADADCEBBBADDEAEEBDDCCBDBDAEEADCDCE',
-                92:'ABAECECCDADADABCABBBEDEEAEDBDCCBDDEEADBAECDCD',
-                105:'DBACCDADCCCEEEECAADCAEAACEADADDCADBEDDBBEAEAE',
-                106:'CDBCACADDCECEEECAADACEAACAECDADDDDABDEEBBAEEA',
-                107:'ACDCBCACDDEEECECCADAAEEACAADCDDAEDDADBEBABEAE',
-                108:'BACCDDACCDCEEEECACDAAEAECAAADCDDBDEDDAEBAAEBE'
-}
+#gabarito2010 = {89:'BACEADCAECABDDACBABEBDEDAEECDBCDBDEEABDACEDDC',
+#                90:'ACAEBCCEADADDBACBEBABDEEADEDDBCBCDDBAEEACDDEC',
+#                91:'CABEAACDCEBADADCEBBBADDEAEEBDDCCBDBDAEEADCDCE',
+#                92:'ABAECECCDADADABCABBBEDEEAEDBDCCBDDEEADBAECDCD',
+#                105:'DBACCDADCCCEEEECAADCAEAACEADADDCADBEDDBBEAEAE',
+#                106:'CDBCACADDCECEEECAADACEAACAECDADDDDABDEEBBAEEA',
+#                107:'ACDCBCACDDEEECECCADAAEEACAADCDDAEDDADBEBABEAE',
+#                108:'BACCDDACCDCEEEECACDAAEAECAAADCDDBDEDDAEBAAEBE'
+#}
 
 
 def resvec(df,rescol,gabcol):
@@ -40,13 +42,13 @@ def resvec(df,rescol,gabcol):
     df['ressum'] = a.sum(axis=1)
     df['resstd'] = a.std(axis=1)
 
-    for qn,x in enumerate(a.T):
-        df['AQ'+str(qn+1)] = x
+    #for qn,x in enumerate(a.T):
+    #    df['AQ'+str(qn+1)] = x
         
     return df, itemstats, teststats, a
         
 def resvec2(df,rescol='TX_RESPOSTAS_CN'):
-    'Transforma o vetore de resolução em colunas do dataframe '
+    'Transforma o vetor de resolução em colunas do dataframe '
     res = df[rescol]
     l = []
     for rvec in res:
@@ -150,9 +152,16 @@ def iccgraph(df,acertos,qn,fig=None,ax=None):
     acertos_no_bin = icc[:,2]
     prob = icc[:,3]
     err = icc[:,4]
+    #X = sm.add_constant(df['nota'],prepend=True)
+    #lf = itemstats['iccfit'][qn-1].predict(X)
+    const,sconst,nota,snota,itemd,sitemd = itemstats['iccfitsparam'][qn-1]
     ax.errorbar(hbin,prob,yerr=err,fmt='o')
+    x = np.linspace(0.9*min(df['nota']),1.1*max(df['nota']),200)
+    p = invlogit(const+nota*x)
+    ax.plot(x,p,'g-')  
     ax.set_ylim(0,1)
     ax.set_yticks([0,0.5,1])
+    ax.set_xticks([200,400,600,800,1000])
     ax.text(0.03,0.85,'Q'+str(qn),transform = ax.transAxes)
     return fig, ax
 
@@ -163,34 +172,86 @@ def iccgrid(df,acertos,ncols=5,nrows=9):
     for row in range(nrows):
         for col in range(ncols):
             ax = plt.subplot2grid((nrows,ncols),(row,col))
-            ax = iccgraph(df,acertos,qn,fig=fig,ax=ax)
+            fig, ax = iccgraph(df,acertos,qn,fig=fig,ax=ax)
             qn += 1
     fig.subplots_adjust(left=0.1,right=0.95,bottom=0.05,top=0.9,wspace=0.4,hspace=0.4)
     return fig
 
-def rawdata2csv(dadosfile = DATAFILE, dicfile = DICFILE, outfile = None):
-    'raw inep fixed format to csv'
-    dic = sasinput(dicfile,filtercols=['NU_INSCRICAO','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN'])
-    print dic
-    if not outfile:
-        outfile = dadosfile[:-3] + 'csv'
-    convert_fff(dadosfile,outfile,dic,sample = 0.001)
+def iccfitgraph(df,acertos,fig=None):
+    ''
+    if not fig:
+        fig = plt.figure()
+        #fig.suptitle(u"Parámetros dos fits logisticos")
 
-def csv2df(idprov=89,tipprov='CN'):
+    ax1 = fig.add_subplot(211)
+    ax1.set_title(u"Dificuldade")
+    ax2 = fig.add_subplot(212)
+    ax2.set_title(u"Discriminição")
+
+    itemstats, teststats = stats(acertos,df['nota'])
+    iccfitsparam = itemstats['iccfitsparam']
+
+    itemds = [p[4] for p in iccfitsparam]
+    err = [p[5] for p in iccfitsparam]
+    x = np.arange(1,len(itemds)+1)
+    ax1.errorbar(x,itemds,yerr=err,fmt='o')
+    ax1.set_ylim(0,1400)
+    ax1.set_xlim(0,48)
+    ax1.set_xticklabels([])
+
+    itemn = [p[2] for p in iccfitsparam]
+    err = [p[3] for p in iccfitsparam]
+    x = np.arange(1,len(itemn)+1)
+    ax2.errorbar(x,itemn,yerr=err,fmt='o')
+    ax2.set_xlabel(u"Questão")
+    #ax1.set_ylim(0,1000)
+    ax2.set_xlim(0,48)
+    ax2.set_xticks([1,5,10,15,20,25,30,35,40,45])
+
+    return fig   
+
+
+def csv2df(idprov=89,tipprov='CN',sexo=None, raca=None):
     'Import enem csv to dataframe, clean it up.'
-    #if tipprov == 'CN':
-    #    csvfile = CSVFILE[:-4] + '-CN.csv'
-    #elif tipprov == 'CH':
-    #    csvfile = CSVFILE[:-4] + '-CH.csv'
     csvfile = CSVFILE
     df = pandas.read_table(csvfile)
-    df = df[(df['ID_PROVA_'+tipprov] == idprov) & (df['NU_NT_'+tipprov] != '         ')]
+    if not idprov:
+        df = df[df['NU_NT_'+tipprov] != '         ']
+    else:
+        df = df[(df['ID_PROVA_'+tipprov] == idprov) & (df['NU_NT_'+tipprov] != '         ')]
+
+
+    if sexo:
+        df = df[df['TP_SEXO'] == sexo]
+
+    if raca:
+        df = df[df['TP_COR_RACA'] == raca]
+        
     df['nota'] = df['NU_NT_'+tipprov].apply(float)
     df, itemstats, teststats, acertos = resvec(df,'TX_RESPOSTAS_'+tipprov,'DS_GABARITO_'+tipprov)
     df = resvec2(df,rescol='TX_RESPOSTAS_'+tipprov)
     return df, itemstats, teststats, acertos
 
 
+def iccgriddif(idprov=89,tipprov='CN',ncols=5,nrows=9):
+    ''
+    df, itemstats, teststats, acertos = csv2df(idprov,tipprov)
+    dfm, itemstatsm, teststatsm, acertosm = csv2df(idprov,tipprov,sexo='M')
+    dff, itemstatsf, teststatsf, acertosf = csv2df(idprov,tipprov,sexo='F')
+    #dfm, itemstatsm, teststatsm, acertosm = csv2df(idprov,tipprov,raca='1')
+    #dff, itemstatsf, teststatsf, acertosf = csv2df(idprov,tipprov,raca='2')
+    fig = plt.figure()
+    qn = 1
+    for row in range(nrows):
+        for col in range(ncols):
+            ax = plt.subplot2grid((nrows,ncols),(row,col))
+            fig, ax = iccgraph(df,acertos,qn,fig=fig,ax=ax)
+            fig, ax = iccgraph(dfm,acertosm,qn,fig=fig,ax=ax)
+            fig, ax = iccgraph(dff,acertosf,qn,fig=fig,ax=ax)
+            qn += 1
+    fig.subplots_adjust(left=0.1,right=0.95,bottom=0.05,top=0.9,wspace=0.4,hspace=0.4)
+    return fig
+
 if __name__ == '__main__':
-    df, itemstats, teststats, acertos = csv2df(CSVFILE)
+    df, itemstats, teststats, acertos = csv2df()
     
