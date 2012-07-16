@@ -29,13 +29,27 @@ CSVFILE =  '/home/ewout/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_201
 
 def resvec(df,rescol,gabcol):
     ''
+
+    dmap = {'A':1,
+            'B':2,
+            'C':3,
+            'D':4,
+            'E':5,
+            '.':'NA',
+            '*':'NA'
+            }
+    tonumbers = lambda x: dmap[x]
+
+    
     res = df[rescol]
     gab = df[gabcol]
     l = []
+    l1 = []
     for rvec,gvec in zip(res,gab):
         l.append([1 if x==y else 0 for x,y in zip(rvec,gvec)])
-
+        l1.append(map(tonumbers,rvec))
     a = np.array(l)
+    an = np.array(l1)
     itemstats, teststats = stats(a,df['nota'])
     df['res'] = list(a)
     df['gab'] = gab
@@ -45,7 +59,7 @@ def resvec(df,rescol,gabcol):
     #for qn,x in enumerate(a.T):
     #    df['AQ'+str(qn+1)] = x
         
-    return df, itemstats, teststats, a
+    return df, itemstats, teststats, a, an
         
 def resvec2(df,rescol='TX_RESPOSTAS_CN'):
     'Transforma o vetor de resolução em colunas do dataframe '
@@ -57,6 +71,7 @@ def resvec2(df,rescol='TX_RESPOSTAS_CN'):
     for qn,x in enumerate(a.T):
         df['Q'+str(qn+1)] = x
     return df
+
 
 def itemfbar(acertos,fig=None,ax=None):
     ''
@@ -228,9 +243,9 @@ def csv2df(idprov=89,tipprov='CN',sexo=None, raca=None):
         df = df[df['TP_COR_RACA'] == raca]
         
     df['nota'] = df['NU_NT_'+tipprov].apply(float)
-    df, itemstats, teststats, acertos = resvec(df,'TX_RESPOSTAS_'+tipprov,'DS_GABARITO_'+tipprov)
+    df, itemstats, teststats, acertos, acertosn = resvec(df,'TX_RESPOSTAS_'+tipprov,'DS_GABARITO_'+tipprov)
     df = resvec2(df,rescol='TX_RESPOSTAS_'+tipprov)
-    return df, itemstats, teststats, acertos
+    return df, itemstats, teststats, acertos, acertosn
 
 
 def iccgriddif(idprov=89,tipprov='CN',ncols=5,nrows=9):
