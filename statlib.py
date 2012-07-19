@@ -15,6 +15,15 @@ from collections import Counter
 
 import statsmodels.api as sm
 
+def isinteger(x):
+    ''
+    ok = True
+    try:
+        int(x)
+    except ValueError:
+        return False
+    return ok
+
 def sasinput(infile,filtercols=[]):
     ''
     infile = os.path.expanduser(infile)
@@ -128,10 +137,10 @@ def icclogisticfit(acertos,qn,hscale):
     X = sm.add_constant(hscale,prepend=True)
     q = acertos[:,qn]
     result = sm.GLM(q,X,family=sm.families.Binomial()).fit()
-    const = result.params['const']
-    nota  = result.params['nota']
-    snota = result.bse['nota']
-    sconst = result.bse['const']
+    const = result.params[0]
+    nota  = result.params[1]
+    snota = result.bse[0]
+    sconst = result.bse[1]
     itemd = -1.*const/nota
     sitemd = itemd*np.sqrt((sconst/const)**2+(snota/nota)**2)
     
@@ -174,10 +183,10 @@ def stats(acertos,hscale = None):
 
 
 if __name__ == '__main__':
-    #dados = '~/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.txt'
-    dados = '~/enem/Microdados ENEM 2009/Dados Enem 2009/DADOS_ENEM_2009.txt'
-    #dicfile = '~/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
-    dicfile = '~/enem/Microdados ENEM 2009/Input_SAS/INPUT_SAS_ENEM_2009.sas'
+    dados = '~/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.txt'
+    #dados = '~/enem/Microdados ENEM 2009/Dados Enem 2009/DADOS_ENEM_2009.txt'
+    dicfile = '~/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
+    #dicfile = '~/enem/Microdados ENEM 2009/Input_SAS/INPUT_SAS_ENEM_2009.sas'
     filtercols = ['NU_INSCRICAO','IDADE','TP_SEXO','TP_COR_RACA','COD_MUNIC_INSC','UF_INSC','IN_TP_ENSINO','IN_PRESENCA_CN','IN_PRESENCA_CH','IN_PRESENCA_LC','IN_PRESENCA_MT','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN','ID_PROVA_CH','NU_NT_CH','TX_RESPOSTAS_CH','DS_GABARITO_CH','ID_PROVA_LC','NU_NT_LC','TX_RESPOSTAS_LC','DS_GABARITO_LC','ID_PROVA_MT','NU_NT_MT','TX_RESPOSTAS_MT','DS_GABARITO_MT']
     dic = sasinput(dicfile,filtercols=filtercols)
     out = dados[:-4] + '.csv'
