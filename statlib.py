@@ -146,7 +146,7 @@ def icclogisticfit(acertos,qn,hscale):
     
     return result,const,sconst,nota,snota,itemd,sitemd
 
-def stats(acertos,hscale = None):
+def stats(acertos,hs = None,df = None):
     ''
     teststats = {}
     itemstats = {}
@@ -165,20 +165,34 @@ def stats(acertos,hscale = None):
     itemstats['itemf'] = itemf
     itemstats['itemv'] = itemv
     itemstats['id50'] = itemdiscrimination(acertos,frac=0.5)
-    itemstats['id27'] = itemdiscrimination(acertos,frac=0.27)
+    itemstats['id25'] = itemdiscrimination(acertos,frac=0.25)
+
+    if hs == "nota":
+        hsscale = df['nota']
+    elif hs == "scores":
+        hscale = df['ressum']
+    elif hs == "notapadrao":
+        notamean = df['nota'].mean()
+        notastd = df['nota'].std() 
+        hscale = (df['nota'] - notamean)/notastd
+    else:
+        return itemstats, teststats 
+
+
     probv = []
     iccfits = []
     iccfitsparam =[]
-    if hasattr(hscale,'max'):
-        for qn in range(k):
-            probv.append(icc(acertos,qn,hscale,bins=20))
-            iccfitresult,const,sconst,nota,snota,itemd,sitemd = icclogisticfit(acertos,qn,hscale)
-            iccfits.append(iccfitresult)
-            iccfitsparam.append((const,sconst,nota,snota,itemd,sitemd))
-        itemstats['icc'] = probv           
-        itemstats['iccfit'] = iccfits
-        itemstats['iccfitsparam'] = iccfitsparam
-    return itemstats, teststats 
+    for qn in range(k):
+        probv.append(icc(acertos,qn,hscale,bins=20))
+        iccfitresult,const,sconst,nota,snota,itemd,sitemd = icclogisticfit(acertos,qn,hscale)
+        iccfits.append(iccfitresult)
+        iccfitsparam.append((const,sconst,nota,snota,itemd,sitemd))
+    itemstats['icc'] = probv           
+    itemstats['iccfit'] = iccfits
+    itemstats['iccfitsparam'] = iccfitsparam
+    itemstats['hscale'] = hscale
+
+    return itemstats, teststats
 
 
 
