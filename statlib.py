@@ -168,7 +168,7 @@ def stats(acertos,hs = None,df = None):
     itemstats['id25'] = itemdiscrimination(acertos,frac=0.25)
 
     if hs == "nota":
-        hsscale = df['nota']
+        hscale = df['nota']
     elif hs == "scores":
         hscale = df['ressum']
     elif hs == "notapadrao":
@@ -203,6 +203,6 @@ if __name__ == '__main__':
     #dicfile = '~/enem/Microdados ENEM 2009/Input_SAS/INPUT_SAS_ENEM_2009.sas'
     filtercols = ['NU_INSCRICAO','IDADE','TP_SEXO','TP_COR_RACA','COD_MUNIC_INSC','UF_INSC','IN_TP_ENSINO','IN_PRESENCA_CN','IN_PRESENCA_CH','IN_PRESENCA_LC','IN_PRESENCA_MT','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN','ID_PROVA_CH','NU_NT_CH','TX_RESPOSTAS_CH','DS_GABARITO_CH','ID_PROVA_LC','NU_NT_LC','TX_RESPOSTAS_LC','DS_GABARITO_LC','ID_PROVA_MT','NU_NT_MT','TX_RESPOSTAS_MT','DS_GABARITO_MT']
     dic = sasinput(dicfile,filtercols=filtercols)
-    out = dados[:-4] + '.csv'
-    convert_fff(dados,out,dic,sample = 0.01)
+    out = dados[:-4] + '5percent.csv'
+    convert_fff(dados,out,dic,sample = 0.05)
 

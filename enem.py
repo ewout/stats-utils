@@ -15,6 +15,7 @@ import statsmodels.api as sm
 #DICFILE =  '/home/ewout/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
 CSVFILE2009 =  '/home/ewout/enem/Microdados ENEM 2009/Dados Enem 2009/DADOS_ENEM_2009.csv'
 CSVFILE2010 =  '/home/ewout/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.csv'
+CSVFILE20105percent =  '/home/ewout/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_20105percent.csv'
 
 #gabarito2010 = {89:'BACEADCAECABDDACBABEBDEDAEECDBCDBDEEABDACEDDC',
 #                90:'ACAEBCCEADADDBACBEBABDEEADEDDBCBCDDBAEEACDDEC',
@@ -168,7 +169,13 @@ def itemfbar2(acertos,acertos2,maxitems=10,fig=None,ax=None):
     fig,ax = orderedfig(itemfdf.index,itemfdf[0],itemfdf2.index,itemfdf2[0],maxitems,fig,ax)
     ax.text(0.5,-0.1,u"Itens em ordem de dificuldade",clip_on=False,transform = ax.transAxes,ha='center')
 
-    return fig,ax
+    orderedstats = itemfdf.reset_index()
+    orderedstats.columns = ['fQ2010','f2010']
+
+    orderedstats2 = itemfdf2.reset_index()
+    orderedstats2.columns = ['fQ2009','f2009']
+
+    return fig,ax, orderedstats.join(orderedstats2)
 
 
 def idbar(acertos,acertos2,order=True,fig=None,ax=None):
@@ -224,6 +231,13 @@ def idbar2(acertos,acertos2,maxitems=10,fig=None,ax=None):
     iddf9 = iddf9.sort(columns=0)
     iddf9 = iddf9[0:maxitems]
 
+    orderedstats = iddf.reset_index()
+    orderedstats.columns = ['idQ2010','id2010']
+
+    orderedstats2 = iddf9.reset_index()
+    orderedstats2.columns = ['idQ2009','id2009']
+
+    orderedstats = orderedstats.join(orderedstats2)
 
 
     if not fig:
@@ -238,8 +252,10 @@ def idbar2(acertos,acertos2,maxitems=10,fig=None,ax=None):
     ax.set_ylim(-0.01,0.15)
 
     ax.text(0.5,-0.1,u"Item",clip_on=False,transform = ax.transAxes,ha='center')
+
+
     
-    return fig,ax
+    return fig,ax, orderedstats
 
 def biscorr(maxitems=10,fig=None,ax=None):
     ''
@@ -255,6 +271,16 @@ def biscorr(maxitems=10,fig=None,ax=None):
     biscorr89 = biscorr89.sort(columns='biscorr')
     biscorr49 = biscorr49[0:maxitems]
     biscorr89 = biscorr89[0:maxitems]
+
+    
+    ostats = biscorr89.copy()
+    ostats.index = range(maxitems)
+    ostats.columns = ['bcQ2010','bc2010']
+    ostats2 = biscorr49.copy()
+    ostats2.index = range(maxitems)
+    ostats2.columns = ['bcQ2009','bc2009']
+
+    ostats = ostats.join(ostats2)
     
     if not fig:
         fig = plt.figure()
@@ -271,20 +297,29 @@ def biscorr(maxitems=10,fig=None,ax=None):
     ax.text(0.5,-0.1,u"Item",clip_on=False,transform = ax.transAxes,ha='center')
 
 
-    return fig,ax
+    return fig,ax,ostats
 
 def logfit(itemstats,itemstats2,maxitems=10,fig=None,ax=None):
     ''
     N = itemstats['k']
     disc = np.array(itemstats['iccfitsparam'])[:,2]
     disc9 = np.array(itemstats2['iccfitsparam'])[:,2]
-    disc = pandas.DataFrame(disc,index=range(1,N+1)).sort(column=0)[0:maxitems]
-    disc9 = pandas.DataFrame(disc9,index=range(1,N+1)).sort(column=0)[0:maxitems]
+    disc = pandas.DataFrame(disc,index=range(1,N+1)).sort(columns=0)[0:maxitems]
+    disc9 = pandas.DataFrame(disc9,index=range(1,N+1)).sort(columns=0)[0:maxitems]
+
+    ostats = disc.reset_index()
+    ostats.columns = ['Q2010','logfit2010']
+
+    ostats2 = disc9.reset_index()
+    ostats2.columns = ['Q2009','logfit2009']
+
+    ostats = ostats.join(ostats2)
+
 
     fig,ax = orderedfig(disc.index,disc[0],disc9.index,disc9[0])
     ax.set_title(u"Discriminação via CCI empírica")
 
-    return fig,ax
+    return fig,ax, ostats
     
 def gradebar(df,qn,fig=None,ax=None):
     ''
@@ -356,33 +391,62 @@ def iccgraph(df,acertos,qn,hs = "scores",fig=None,ax=None):
     
     return fig, ax
 
-def tpmfitgraph(df,acertos,qn,fig=None,ax=None):
+def ltmfitparams(provid):
     ''
+
+    if provid == 89:
+        ltmsummary = pandas.read_table('/home/ewout/Dropbox/RIRT/ltm89summary.csv')
+    elif provid == 49:
+        ltmsummary = pandas.read_table('/home/ewout/Dropbox/RIRT/ltm49summary.csv')    
+    else:
+        raise Exception('Só usar com prova 89')
+    ltmdif = ltmsummary[:45]
+    ltmdisc = ltmsummary[45:]
+    ltmdif.index = range(1,46)
+    ltmdisc.index = range(1,46)
+
+    return ltmdif,ltmdisc
+
+def ltmfitgraph(df,acertos,qn1,qn2,fig=None):
+    'Só usar com prova 89 ou 49!'
+
+    provid = df['ID_PROVA_CN'].values[0]
+
     if not fig:
         fig = plt.figure()
-    if not ax:
-        ax = fig.add_subplot(111)
-        ax.set_title(u"Curva Característica do Item "+str(qn)+" (+ 3PL fit)")
+        fig.suptitle(u"Curvas Características dos Itens "+str(qn1)+" e "+str(qn2)+" (+ ajuste 2PL TRI)")
+    ax1 = fig.add_subplot(121)
+    ax2 = fig.add_subplot(122)
 
-    itemstats, teststats = stats(acertos,hs = 'notapadrao',df=df)
-    hscale = itemstats['hscale']
-    icc = itemstats['icc'][qn-1]
-    hbin = icc[:,0]
-    nbin = icc[:,1]
-    acertos_no_bin = icc[:,2]
-    prob = icc[:,3]
-    err = icc[:,4]
+    for qn,ax in [(qn1,ax1),(qn2,ax2)]:
+        itemstats, teststats = stats(acertos,hs = 'notapadrao',df=df)
+        hscale = itemstats['hscale']
+        icc = itemstats['icc'][qn-1]
+        hbin = icc[:,0]
+        nbin = icc[:,1]
+        acertos_no_bin = icc[:,2]
+        prob = icc[:,3]
+        err = icc[:,4]
 
-    ax.errorbar(hbin,prob,yerr=err,fmt='o')
-    x = np.linspace(0.9*min(hscale),1.1*max(hscale),200)
-#    p = invlogit(const+nota*x)
-#    ax.plot(x,p,'g-')  
-    ax.set_ylim(0,1)
-    ax.set_yticks([0,0.5,1])
-    ax.set_xlabel(u"Escore Enem Padronizada")
-    ax.set_ylabel(u"Probabilidade")
+        ax.errorbar(hbin,prob,yerr=err,fmt='o')
+
+        x = np.linspace(0.9*min(hscale),1.1*max(hscale),200)
+        ltmdif,ltmdisc = ltmfitparams(provid)
+        a = ltmdisc['value'][qn]
+        b = ltmdif['value'][qn]
+        p = invlogit(1.0*a*(x-b))
+        ax.plot(x,p,'k-')  
+        ax.set_ylim(0,1)
+        ax.set_yticks([0,0.5,1])
+        ax.set_xlabel(u"Escore Enem Padronizada")
+        ax.set_ylabel(u"Probabilidade")
+
+    ax2.set_ylabel('')
+    ax1.text(0.05,0.9,'Q'+str(qn1),transform = ax1.transAxes,fontsize='medium',weight='bold')
+    ax2.text(0.05,0.9,'Q'+str(qn2),transform = ax2.transAxes,fontsize='medium',weight='bold')
+
     
-    return fig, ax
+    return fig
 
 
 def iccgrid(df,acertos,ncols=5,nrows=9,hs='scores',fig=None):
@@ -437,7 +501,7 @@ def csv2df(idprov=89,tipprov='CN',sexo=None, raca=None,hscale=None):
     if idprov in range(49,85):
         csvfile = CSVFILE2009
     elif idprov in range(89,117):
-        csvfile = CSVFILE2010
+        csvfile = CSVFILE20105percent
     else:
         raise Exception("ID da Prova errada!")
     df = pandas.read_table(csvfile)
@@ -484,6 +548,28 @@ def iccgriddif(idprov=89,tipprov='CN',ncols=5,nrows=9):
     fig.subplots_adjust(left=0.1,right=0.95,bottom=0.05,top=0.9,wspace=0.4,hspace=0.4)
     return fig
 
+def allstats(idprov):
+    ''
+    df, itemstats, teststats, acertos, acertosn = csv2df(idprov=idprov,tipprov='CN',hscale='scores')
+    itemf = itemstats['itemf']
+    id25 = itemstats['id25']
+
+    from string import lstrip
+    if idprov == 49:
+        biscorr = pandas.read_table('/home/ewout/Dropbox/RIRT/dsc49-biscorr.csv',header=None,names=['Q','biscorr'])
+    elif idprov == 89:
+        biscorr = pandas.read_table('/home/ewout/Dropbox/RIRT/dsc89-biscorr.csv',header=None,names=['Q','biscorr'])
+    biscorr = biscorr['biscorr'].values
+
+    logfit = np.array(itemstats['iccfitsparam'])[:,2]
+    ltmdif,ltmdisc = ltmfitparams(idprov)
+    ltmdif = ltmdif['value'].values
+    ltmdisc = ltmdisc['value'].values
+    
+    statdf = pandas.DataFrame({'itemf':itemf,'id25':id25,'biscorr':biscorr,'logfit':logfit,'ltmdisc':ltmdisc,'ltmdif':ltmdif})
+
+    return statdf
+
 def generate_graphs(graphs = "all"):
     ''
     df, itemstats, teststats, acertos, acertosn = csv2df(idprov=89,tipprov='CN',hscale='scores')
@@ -494,20 +580,24 @@ def generate_graphs(graphs = "all"):
     swidth =  8/pol
     sfig = (swidth,igr*swidth)
     dfig = (2*swidth,2*igr*swidth)
-    
+
+ 
     #fig = plt.figure(figsize=dfig)
-    fig, ax = itemfbar2(acertos,acertos9)
+    fig, ax, ostats = itemfbar2(acertos,acertos9)
     fig.savefig('figs/itemfbar.png')
-    # bar graph da questão 27 de 2010
+    # bar graph da questão 25 de 2010
     #fig = plt.figure(figsize=dfig)
-    fig, ax = gradebar(df,21)
-    fig.savefig('figs/gradebar-27-2010.png')
+    fig, ax = gradebar(df,25)
+    fig.savefig('figs/gradebar-25-2010-5percent.png')
 
-    fig, ax = idbar2(acertos,acertos9)
-    fig.savefig('figs/idbar.png')
+    fig, ax = gradebar(df9,31)
+    fig.savefig('figs/gradebar-31-2009.png')
+
+    fig, ax, ostats2 = idbar2(acertos,acertos9)
+    fig.savefig('figs/idbar-5percent.png')
     
 
-    fig, ax = biscorr()
+    fig, ax, ostats3 = biscorr()
     fig.savefig('figs/biscorr.png')
 
     fig = plt.figure()
@@ -515,13 +605,27 @@ def generate_graphs(graphs = "all"):
     ax2 = fig.add_subplot(122)
     iccgraph(df,acertos,11,hs='scores',fig=fig,ax=ax1)
     iccgraph(df,acertos,25,hs='scores',fig=fig,ax=ax2)
-    fig.savefig('figs/eicc.png')
-    
-    fig, ax = logfit(itemstats,itemstats9)
-    fig.savefig('figs/logfit.png')
+    ax2.set_ylabel('')
+    ax1.text(0.05,0.9,'Q11',transform = ax1.transAxes,fontsize='medium',weight='bold')
+    ax2.text(0.05,0.9,'Q25',transform = ax2.transAxes,fontsize='medium',weight='bold')
+    fig.savefig('figs/eicc-5percent.png')
 
+    fig = plt.figure()
+    fig = ltmfitgraph(df,acertos,11,25,fig=fig)
+    fig.savefig('figs/ltm89-11-25-5percent.png')
+    
+    fig, ax, ostats4 = logfit(itemstats,itemstats9)
+    fig.savefig('figs/logfit-5percent.png')
+
+    ostatstotal = ostats.join(ostats2)
+    ostatstotal = ostatstotal.join(ostats3)
+    ostatstotal = ostatstotal.join(ostats4)
+
+    ostatstotal.to_excel('figs/ostats-5percent.xlsx')
+    
+    return ostatstotal
     
 
 if __name__ == '__main__':
-    pass
+    generate_graphs()
     
