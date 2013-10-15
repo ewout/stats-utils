@@ -197,12 +197,10 @@ def stats(acertos,hs = None,df = None):
 
 
 if __name__ == '__main__':
-    dados = '~/enem/Microdados ENEM 2010/Dados Enem 2010/DADOS_ENEM_2010.txt'
-    #dados = '~/enem/Microdados ENEM 2009/Dados Enem 2009/DADOS_ENEM_2009.txt'
-    dicfile = '~/enem/Microdados ENEM 2010/Input_SAS/INPUT_SAS_ENEM_2010.SAS'
-    #dicfile = '~/enem/Microdados ENEM 2009/Input_SAS/INPUT_SAS_ENEM_2009.sas'
+    dados = '~/enem/2010/dados/DADOS_ENEM_2010.txt'
+    dicfile = '~/enem/2010/INPUT_SAS_ENEM_2010.SAS'
     filtercols = ['NU_INSCRICAO','IDADE','TP_SEXO','TP_COR_RACA','COD_MUNIC_INSC','UF_INSC','IN_TP_ENSINO','IN_PRESENCA_CN','IN_PRESENCA_CH','IN_PRESENCA_LC','IN_PRESENCA_MT','ID_PROVA_CN','NU_NT_CN','TX_RESPOSTAS_CN','DS_GABARITO_CN','ID_PROVA_CH','NU_NT_CH','TX_RESPOSTAS_CH','DS_GABARITO_CH','ID_PROVA_LC','NU_NT_LC','TX_RESPOSTAS_LC','DS_GABARITO_LC','ID_PROVA_MT','NU_NT_MT','TX_RESPOSTAS_MT','DS_GABARITO_MT']
     dic = sasinput(dicfile,filtercols=filtercols)
-    out = dados[:-4] + '5percent.csv'
-    convert_fff(dados,out,dic,sample = 0.05)
+    out = 'enem_2010_1.csv'
+    convert_fff(dados,out,dic,sample = 0.01)
 
